@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifndef __unix__
+#include <windows.h>
+#endif
 
 #define FUNDO 1
-#define LIDO 2
-#define MOSTRAFUNDO 0
+#define LENDO 2
+#define LIDO 3
 
 struct PixelInfo {
     unsigned int r, g, b;
@@ -31,19 +34,21 @@ int push(struct tPilha *, int, int);
 struct tPos *get(struct tPilha *);
 void deletarPilha(struct tPilha *pilha);
 
-int contarObjetos(struct ImageInfo *);
-void abrir(struct ImageInfo *, int, int);
+int contarObjetos(struct ImageInfo *, int);
+void abrir(struct ImageInfo *, int, int, int);
 
 FILE *readFile();
 void image2Struct (FILE *, struct PixelInfo *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
+void cor(struct PixelInfo *, int);
 void printImage(struct ImageInfo *);
 int getNumber(FILE *, unsigned int *);
 
 int power(int, int);
 
 int main() {
-    int ret = 0;
+    int ret = 0, objs;
+    char input;
     FILE *ppm;
     struct ImageInfo imagem;
     struct PixelInfo *pixels[8];
@@ -68,12 +73,20 @@ int main() {
         printf("\nErro no alocamento!\n");
         return -1;
     }
-
+    printf("\nDeseja exibir a imagem [s/n]? ");
+    scanf(" %c", &input);
     image2Struct(ppm, imagem.inicio);
-    //printImage(&imagem);
-    printf("Objetos: %d\n", contarObjetos(&imagem));
-
+    
+    if (input == 's' || input == 'S') {
+        objs = contarObjetos(&imagem, 1);
+        printImage(&imagem);
+    } else {
+        objs = contarObjetos(&imagem, 0);
+    }
+    printf("\nObjetos: %d\n", objs);
     free(imagem.inicio);
+    fclose(ppm);
+    
     return 0;
 }
 
@@ -90,11 +103,11 @@ struct tPilha *criarPilha(int x, int y) {
 }
 
 int pop(struct tPilha *pilha) {
-    if (pilha->tamanho == 0)
+    if (!pilha->tamanho)
         return -1;
 
     pilha->tamanho--;
-    if (pilha->tamanho == 0) {
+    if (!pilha->tamanho) {
         pilha->pixels->x = 0;
         pilha->pixels->y = 0;
         return 0;
@@ -128,14 +141,14 @@ void deletarPilha(struct tPilha *pilha) {
     free(pilha);
 }
 
-int contarObjetos(struct ImageInfo *imagem) {
+int contarObjetos(struct ImageInfo *imagem, int mostrar) {
     struct PixelInfo *pixel = imagem->inicio;
     int i, j, obj=0;
     for (i = 0; i < imagem->altura; i++) {
         for (j = 0; j < imagem->largura; j++) {
-            if (getPixel(imagem, j, i)->tipo == 0) {
+            if (!getPixel(imagem, j, i)->tipo) {
                 //printf("abrindo para %d %d\n", j, i);
-                abrir(imagem, j, i);
+                abrir(imagem, j, i, mostrar);
                 obj++;
             }
         }
@@ -144,8 +157,8 @@ int contarObjetos(struct ImageInfo *imagem) {
     return obj;
 }
 
-void abrir(struct ImageInfo *imagem, int x, int y) {
-    int i, j;
+void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
+    int i;
     struct PixelInfo *pixel;
     struct tPilha *pilha;
     struct tPos *pos;
@@ -156,25 +169,42 @@ void abrir(struct ImageInfo *imagem, int x, int y) {
         x = pos->x;
         y = pos->y;
         pop(pilha);
-        
-        for (i = (y - 1); i <=  (y + 1); i++) {
-            if (i >= 0 && i < imagem->altura) {
-                pixel = getPixel(imagem, x, i);
-                if (pixel->tipo == 0) {
-                    pixel->tipo = 2;
-                    push(pilha, x, i);
-                }
-            }
-        }
+        for (i = -1; i <=  1; i++) {
 
-        for (j = (x - 1); j <= (x + 1); j++) {
-            if (j >= 0 && j < imagem->largura) {
-                pixel = getPixel(imagem, j, y);
-                if (pixel->tipo == 0) {
-                    pixel->tipo = 2;
-                    push(pilha, j, y);
+            if ((y + i) >= 0 && (y + i) < imagem->altura) {
+                pixel = getPixel(imagem, x, (y + i));
+                if (!pixel->tipo) {
+                    pixel->tipo = LENDO;
+                    push(pilha, x, (y + i));
+                    if (mostrar) {
+                        printImage(imagem);
+#ifdef __unix__
+                        usleep(1 * power(10, 5));
+#else
+                        Sleep(1 * power(10, 5));
+#endif
+                    }
+                    pixel->tipo = LIDO;
                 }
             }
+
+            if ((x + i) >= 0 && (x + i) < imagem->largura) {
+                pixel = getPixel(imagem, (x + i), y);
+                if (!pixel->tipo) {
+                    pixel->tipo = LENDO;
+                    push(pilha, (x + i), y);
+                    if (mostrar) {
+                        printImage(imagem);
+#ifdef __unix__
+                        usleep(1 * power(10, 5));
+#else
+                        Sleep(1 * power(10, 5));
+#endif
+                    }
+                    pixel->tipo = LIDO;
+                }
+            }
+
         }
 
     }
@@ -236,40 +266,60 @@ struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
     return image->inicio + inc;
 };
 
+void cor(struct PixelInfo *pixel, int intensidade) {
+    if (pixel->r > (pixel->g + pixel->b)/2) {
+        if (pixel->g > pixel->r/2) {
+            printf("\033[0;33m");
+        } else if (pixel->b > pixel->r/2) {
+            printf("\033[0;35m");
+        } else {
+            printf("\033[0;31m");
+        }
+    } else if (pixel->g > (pixel->r + pixel->b)/2) {
+        if (pixel->b > pixel->g/2) {
+            printf("\033[0;36m");
+        } else {
+            printf("\033[0;32m");
+        }
+    } else if (pixel->b > (pixel->g + pixel->r)/2) {
+        printf("\033[0;34m");
+    } else {
+        if (pixel->r > intensidade/2) {
+            printf("\033[0;37m");
+        } else {
+            printf("\033[0;30m");
+        }
+    }
+}
+
 void printImage(struct ImageInfo *image) {
     struct PixelInfo *pixel = image->inicio;
     int i;
-    for (i = 1; i <= image->altura * image->largura; i++) {
-        if (pixel->tipo != FUNDO || MOSTRAFUNDO) {
+
 #ifdef __unix__
-            if (pixel->r > (pixel->g + pixel->b)/2) {
-                if (pixel->g > pixel->r/2) {
-                    printf("\033[0;33m\u25A0\033[0m");
-                } else if (pixel->b > pixel->r/2) {
-                    printf("\033[0;35m\u25A0\033[0m");
-                } else {
-                    printf("\033[0;31m\u25A0\033[0m");
-                }
-            } else if (pixel->g > (pixel->r + pixel->b)/2) {
-                if (pixel->b > pixel->g/2) {
-                    printf("\033[0;36m\u25A0\033[0m");
-                } else {
-                    printf("\033[0;32m\u25A0\033[0m");
-                }
-            } else if (pixel->b > (pixel->g + pixel->r)/2) {
-                printf("\033[0;34m\u25A0\033[0m");
+    system("clear");
+#else
+    system("@cls");
+#endif
+
+    printf("\n%d x %d - %d\n\n", image->largura, image->altura, image->intensidade);
+    for (i = 1; i <= image->altura * image->largura; i++) {
+        if (pixel->tipo != FUNDO) {
+#if __unix__
+            if (pixel->tipo != LENDO) {
+                cor(pixel, image->intensidade);
+                printf("\u25A0");
+                printf("\033[0m");
             } else {
-                if (pixel->r > image->intensidade/2) {
-                    printf("\033[0;37m\u25A0\033[0m");
-                } else {
-                    printf("\033[0;30m\u25A0\033[0m");
-                }
+                cor(pixel, image->intensidade);
+                printf("\u25CF");
+                printf("\033[0m");
             }
 #else
-            if ((pixel->r + pixel->g + pixel->b) > image->intensidade/2) {
+            if (pixel->tipo != LENDO) {
                 printf("#");
             } else {
-                printf(" ");
+                printf("X");
             }
 #endif
         } else {
