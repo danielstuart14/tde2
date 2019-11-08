@@ -181,7 +181,7 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
 #ifdef __unix__
                         usleep(1 * power(10, 5));
 #else
-                        Sleep(1 * power(10, 5));
+                        Sleep(1 * power(10, 2));
 #endif
                     }
                     pixel->tipo = LIDO;
@@ -198,7 +198,7 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
 #ifdef __unix__
                         usleep(1 * power(10, 5));
 #else
-                        Sleep(1 * power(10, 5));
+                        Sleep(1 * power(10, 2));
 #endif
                     }
                     pixel->tipo = LIDO;
@@ -299,7 +299,7 @@ void printImage(struct ImageInfo *image) {
 #ifdef __unix__
     system("clear");
 #else
-    system("@cls");
+    system("cls");
 #endif
 
     printf("\n%d x %d - %d\n\n", image->largura, image->altura, image->intensidade);
