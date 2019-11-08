@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#ifndef __unix__
+#ifdef __unix__
+#include <unistd.h>
+#else
 #include <windows.h>
 #endif
 
@@ -10,12 +12,12 @@
 #define LIDO 3
 
 struct PixelInfo {
-    unsigned int r, g, b;
+    int r, g, b;
     int tipo;
 };
 
 struct ImageInfo {
-    unsigned int largura, altura, intensidade;
+    int largura, altura, intensidade;
     struct PixelInfo *inicio;
 };
 
@@ -42,7 +44,7 @@ void image2Struct (FILE *, struct PixelInfo *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
 void cor(struct PixelInfo *, int);
 void printImage(struct ImageInfo *);
-int getNumber(FILE *, unsigned int *);
+int getNumber(FILE *, int *);
 
 int power(int, int);
 
@@ -51,7 +53,6 @@ int main() {
     char input;
     FILE *ppm;
     struct ImageInfo imagem;
-    struct PixelInfo *pixels[8];
     printf("Contador de Objetos PPM\n");
     printf("  Por: Daniel Stuart\n\n");
 
@@ -91,7 +92,7 @@ int main() {
 }
 
 struct tPilha *criarPilha(int x, int y) {
-    struct tPilha *ret = malloc(sizeof(struct tPilha));
+    struct tPilha *ret = (struct tPilha *) malloc(sizeof(struct tPilha));
     ret->tamanho = 1;
     ret->pixels = (struct tPos *) malloc(sizeof(struct tPos));
     if (ret->pixels == NULL)
@@ -142,7 +143,6 @@ void deletarPilha(struct tPilha *pilha) {
 }
 
 int contarObjetos(struct ImageInfo *imagem, int mostrar) {
-    struct PixelInfo *pixel = imagem->inicio;
     int i, j, obj=0;
     for (i = 0; i < imagem->altura; i++) {
         for (j = 0; j < imagem->largura; j++) {
@@ -236,7 +236,7 @@ FILE *readFile() {
 
 void image2Struct (FILE *ppm, struct PixelInfo *first) {
     struct PixelInfo *pixel = first;
-    unsigned int c = fgetc(ppm);
+    int c = fgetc(ppm);
 
     pixel->r = c;
     c = fgetc(ppm);
@@ -333,8 +333,8 @@ void printImage(struct ImageInfo *image) {
     }
 }
 
-int getNumber(FILE *file, unsigned int *val) {
-    unsigned int i, ret=0, c = fgetc(file);
+int getNumber(FILE *file, int *val) {
+    int i, ret=0, c = fgetc(file);
     while (c == ' ' || c == '\n') {
         c = fgetc(file);
         if (c == EOF)
