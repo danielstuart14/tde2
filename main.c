@@ -16,12 +16,30 @@ struct ImageInfo {
     struct PixelInfo *inicio;
 };
 
+struct tPos {
+    int x, y;
+};
+
+struct tPilha {
+    int tamanho;
+    struct tPos *pixels;
+};
+
+struct tPilha *criarPilha(int, int);
+int pop(struct tPilha *);
+int push(struct tPilha *, int, int);
+struct tPos *get(struct tPilha *);
+void deletarPilha(struct tPilha *pilha);
+
+int contarObjetos(struct ImageInfo *);
 void abrir(struct ImageInfo *, int, int);
+
 FILE *readFile();
 void image2Struct (FILE *, struct PixelInfo *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
 void printImage(struct ImageInfo *);
 int getNumber(FILE *, unsigned int *);
+
 int power(int, int);
 
 int main() {
@@ -44,7 +62,7 @@ int main() {
         return -1;
     }
 
-    printf("%d x %d - %d\n", imagem.largura, imagem.altura, imagem.intensidade);
+    printf("\n%d x %d - %d\n", imagem.largura, imagem.altura, imagem.intensidade);
     imagem.inicio = (struct PixelInfo *) calloc(imagem.altura * imagem.largura, sizeof(struct PixelInfo));
     if (imagem.inicio == NULL) {
         printf("\nErro no alocamento!\n");
@@ -52,38 +70,116 @@ int main() {
     }
 
     image2Struct(ppm, imagem.inicio);
-    printImage(&imagem);
-    struct PixelInfo *pixel = imagem.inicio;
+    //printImage(&imagem);
+    printf("Objetos: %d\n", contarObjetos(&imagem));
+
+    free(imagem.inicio);
+    return 0;
+}
+
+struct tPilha *criarPilha(int x, int y) {
+    struct tPilha *ret = malloc(sizeof(struct tPilha));
+    ret->tamanho = 1;
+    ret->pixels = (struct tPos *) malloc(sizeof(struct tPos));
+    if (ret->pixels == NULL)
+        return NULL;
+    
+    ret->pixels->x = x;
+    ret->pixels->y = y;
+    return ret;
+}
+
+int pop(struct tPilha *pilha) {
+    if (pilha->tamanho == 0)
+        return -1;
+
+    pilha->tamanho--;
+    if (pilha->tamanho == 0) {
+        pilha->pixels->x = 0;
+        pilha->pixels->y = 0;
+        return 0;
+    }
+    pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho);
+    if (pilha->pixels == NULL)
+        return -1;
+
+    return 0;
+}
+
+int push(struct tPilha *pilha, int x, int y) {
+    pilha->tamanho++;
+    if (pilha->tamanho != 1) {
+        pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho);
+        if (pilha->pixels == NULL)
+            return -1;
+    }
+    
+    (pilha->pixels + (pilha->tamanho - 1))->x = x;
+    (pilha->pixels + (pilha->tamanho - 1))->y = y;
+    return 0;
+}
+
+struct tPos *get(struct tPilha *pilha) {
+    return pilha->pixels + (pilha->tamanho - 1);
+}
+
+void deletarPilha(struct tPilha *pilha) {
+    free(pilha->pixels);
+    free(pilha);
+}
+
+int contarObjetos(struct ImageInfo *imagem) {
+    struct PixelInfo *pixel = imagem->inicio;
     int i, j, obj=0;
-    for (i = 0; i < imagem.altura; i++) {
-        for (j = 0; j < imagem.largura; j++) {
-            if (getPixel(&imagem, j, i)->tipo == 0) {
+    for (i = 0; i < imagem->altura; i++) {
+        for (j = 0; j < imagem->largura; j++) {
+            if (getPixel(imagem, j, i)->tipo == 0) {
                 //printf("abrindo para %d %d\n", j, i);
-                abrir(&imagem, j, i);
+                abrir(imagem, j, i);
                 obj++;
             }
         }
     }
-    printf("Objetos: %d\n", obj);
-
-    return 0;
+    
+    return obj;
 }
 
 void abrir(struct ImageInfo *imagem, int x, int y) {
     int i, j;
     struct PixelInfo *pixel;
-    for (i = (y - 1); i <=  (y + 1); i++) {
-        for (j = (x - 1); j <= (x + 1); j++) {
-            if (j >= 0 && j < imagem->largura && i >= 0 && i < imagem->altura) {
-                pixel = getPixel(imagem, j, i);
+    struct tPilha *pilha;
+    struct tPos *pos;
+    pilha = criarPilha(x, y);
+    
+    while (pilha->tamanho > 0) {
+        pos = get(pilha);
+        x = pos->x;
+        y = pos->y;
+        pop(pilha);
+        
+        for (i = (y - 1); i <=  (y + 1); i++) {
+            if (i >= 0 && i < imagem->altura) {
+                pixel = getPixel(imagem, x, i);
                 if (pixel->tipo == 0) {
-                    //printf("%d %d aberto\n", j, i);
                     pixel->tipo = 2;
-                    abrir(imagem, j, i);
+                    push(pilha, x, i);
                 }
             }
         }
+
+        for (j = (x - 1); j <= (x + 1); j++) {
+            if (j >= 0 && j < imagem->largura) {
+                pixel = getPixel(imagem, j, y);
+                if (pixel->tipo == 0) {
+                    pixel->tipo = 2;
+                    push(pilha, j, y);
+                }
+            }
+        }
+
     }
+
+    deletarPilha(pilha);
 }
 
 FILE *readFile() {
@@ -136,8 +232,8 @@ void image2Struct (FILE *ppm, struct PixelInfo *first) {
 }
 
 struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
-    long inc = sizeof(struct PixelInfo)*(x + (image->largura)*y);
-    return (struct PixelInfo *) ((long) image->inicio + inc);
+    long inc = x + (image->largura)*y;
+    return image->inicio + inc;
 };
 
 void printImage(struct ImageInfo *image) {
@@ -208,7 +304,7 @@ int getNumber(FILE *file, unsigned int *val) {
     }
 
     *val = ret;
-    return;
+    return 0;
 }
 
 int power(int base, int exponent) {
