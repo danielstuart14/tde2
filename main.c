@@ -2,9 +2,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define FUNDO 1
+#define LIDO 2
+#define MOSTRAFUNDO 0
+
 struct PixelInfo {
     unsigned int r, g, b;
-    int lido, fundo;
+    int tipo;
 };
 
 struct ImageInfo {
@@ -12,6 +16,7 @@ struct ImageInfo {
     struct PixelInfo *inicio;
 };
 
+void abrir(struct ImageInfo *, int, int);
 FILE *readFile();
 void image2Struct (FILE *, struct PixelInfo *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
@@ -23,6 +28,7 @@ int main() {
     int ret = 0;
     FILE *ppm;
     struct ImageInfo imagem;
+    struct PixelInfo *pixels[8];
     printf("Contador de Objetos PPM\n");
     printf("  Por: Daniel Stuart\n\n");
 
@@ -39,7 +45,7 @@ int main() {
     }
 
     printf("%d x %d - %d\n", imagem.largura, imagem.altura, imagem.intensidade);
-    imagem.inicio = calloc(imagem.altura * imagem.largura, sizeof(struct PixelInfo));
+    imagem.inicio = (struct PixelInfo *) calloc(imagem.altura * imagem.largura, sizeof(struct PixelInfo));
     if (imagem.inicio == NULL) {
         printf("\nErro no alocamento!\n");
         return -1;
@@ -47,8 +53,37 @@ int main() {
 
     image2Struct(ppm, imagem.inicio);
     printImage(&imagem);
+    struct PixelInfo *pixel = imagem.inicio;
+    int i, j, obj=0;
+    for (i = 0; i < imagem.altura; i++) {
+        for (j = 0; j < imagem.largura; j++) {
+            if (getPixel(&imagem, j, i)->tipo == 0) {
+                //printf("abrindo para %d %d\n", j, i);
+                abrir(&imagem, j, i);
+                obj++;
+            }
+        }
+    }
+    printf("Objetos: %d\n", obj);
 
     return 0;
+}
+
+void abrir(struct ImageInfo *imagem, int x, int y) {
+    int i, j;
+    struct PixelInfo *pixel;
+    for (i = (y - 1); i <=  (y + 1); i++) {
+        for (j = (x - 1); j <= (x + 1); j++) {
+            if (j >= 0 && j < imagem->largura && i >= 0 && i < imagem->altura) {
+                pixel = getPixel(imagem, j, i);
+                if (pixel->tipo == 0) {
+                    //printf("%d %d aberto\n", j, i);
+                    pixel->tipo = 2;
+                    abrir(imagem, j, i);
+                }
+            }
+        }
+    }
 }
 
 FILE *readFile() {
@@ -74,86 +109,81 @@ FILE *readFile() {
 }
 
 void image2Struct (FILE *ppm, struct PixelInfo *first) {
-    struct PixelInfo *pixels = first;
+    struct PixelInfo *pixel = first;
     unsigned int c = fgetc(ppm);
-    pixels->r = c;
+
+    pixel->r = c;
     c = fgetc(ppm);
-    pixels->g = c;
+    pixel->g = c;
     c = fgetc(ppm);
-    pixels->b = c;
+    pixel->b = c;
     c = fgetc(ppm);
-    pixels->fundo = 1;
-    pixels++;
+    pixel->tipo = FUNDO;
+    pixel++;
 
     while (c != EOF) {
-        pixels->r = c;
+        pixel->r = c;
         c = fgetc(ppm);
-        pixels->g = c;
+        pixel->g = c;
         c = fgetc(ppm);
-        pixels->b = c;
+        pixel->b = c;
         c = fgetc(ppm);
-        if (pixels->r == first->r && pixels->g == first->g && pixels->b == first->b)
-            pixels->fundo = 1;
+        if (pixel->r == first->r && pixel->g == first->g && pixel->b == first->b)
+            pixel->tipo = FUNDO;
 
-        pixels++;
+        pixel++;
     }
 }
 
 struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
-    unsigned long inc = sizeof(struct PixelInfo)*(x + image->largura*y);
-    return ((unsigned long) image->inicio + inc);
+    long inc = sizeof(struct PixelInfo)*(x + (image->largura)*y);
+    return (struct PixelInfo *) ((long) image->inicio + inc);
 };
 
 void printImage(struct ImageInfo *image) {
-    struct PixelInfo *pixels = image->inicio;
+    struct PixelInfo *pixel = image->inicio;
     int i;
     for (i = 1; i <= image->altura * image->largura; i++) {
+        if (pixel->tipo != FUNDO || MOSTRAFUNDO) {
 #ifdef __unix__
-        if (pixels->r > (pixels->g + pixels->b)/2) {
-            if (pixels->g > pixels->r/2) {
-                printf("\033[0;33m");
-                printf("%c", '#');
-                printf("\033[0m");
-            } else if (pixels->b > pixels->r/2) {
-                printf("\033[0;35m");
-                printf("%c", '#');
-                printf("\033[0m");
+            if (pixel->r > (pixel->g + pixel->b)/2) {
+                if (pixel->g > pixel->r/2) {
+                    printf("\033[0;33m\u25A0\033[0m");
+                } else if (pixel->b > pixel->r/2) {
+                    printf("\033[0;35m\u25A0\033[0m");
+                } else {
+                    printf("\033[0;31m\u25A0\033[0m");
+                }
+            } else if (pixel->g > (pixel->r + pixel->b)/2) {
+                if (pixel->b > pixel->g/2) {
+                    printf("\033[0;36m\u25A0\033[0m");
+                } else {
+                    printf("\033[0;32m\u25A0\033[0m");
+                }
+            } else if (pixel->b > (pixel->g + pixel->r)/2) {
+                printf("\033[0;34m\u25A0\033[0m");
             } else {
-                printf("\033[0;31m");
-                printf("%c", '#');
-                printf("\033[0m");
+                if (pixel->r > image->intensidade/2) {
+                    printf("\033[0;37m\u25A0\033[0m");
+                } else {
+                    printf("\033[0;30m\u25A0\033[0m");
+                }
             }
-        } else if (pixels->g > (pixels->r + pixels->b)/2) {
-            if (pixels->b > pixels->g/2) {
-                printf("\033[0;36m");
-                printf("%c", '#');
-                printf("\033[0m");
-            } else {
-                printf("\033[0;32m");
-                printf("%c", '#');
-                printf("\033[0m");
-            }
-        } else if (pixels->b > (pixels->g + pixels->r)/2) {
-            printf("\033[0;34m");
-            printf("%c", '#');
-            printf("\033[0m");
-        } else {
-            if (pixels->r > image->intensidade/2) {
-                printf("%c", '#');
-            } else {
-                printf("%c", ' ');
-            }
-        }
 #else
-        if ((pixels->r + pixels->g + pixels->b) > image->intensidade/2) {
-            printf("%c", '#');
-        } else {
-            printf("%c", ' ');
-        }
+            if ((pixel->r + pixel->g + pixel->b) > image->intensidade/2) {
+                printf("#");
+            } else {
+                printf(" ");
+            }
 #endif
+        } else {
+            printf(" ");
+        }
+
         if (!(i % image->largura))
             printf("\n");
-        pixels++;
+
+        pixel++;
     }
 }
 
