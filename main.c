@@ -42,7 +42,7 @@ void abrir(struct ImageInfo *, int, int, int);
 FILE *readFile();
 void image2Struct (FILE *, struct PixelInfo *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
-void cor(struct PixelInfo *, int);
+void cor(int, int, int, int);
 void printImage(struct ImageInfo *);
 int getNumber(FILE *, int *);
 
@@ -179,9 +179,9 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
                     if (mostrar) {
                         printImage(imagem);
 #ifdef __unix__
-                        usleep(1 * power(10, 5));
+                        usleep(5 * power(10, 4));
 #else
-                        Sleep(1 * power(10, 2));
+                        Sleep(5 * power(10, 1));
 #endif
                     }
                     pixel->tipo = LIDO;
@@ -266,25 +266,25 @@ struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
     return image->inicio + inc;
 };
 
-void cor(struct PixelInfo *pixel, int intensidade) {
-    if (pixel->r > (pixel->g + pixel->b)/2) {
-        if (pixel->g > pixel->r/2) {
+void cor(int r, int g, int b, int intensidade) {
+    if (r > (g + b)/2) {
+        if (g > r/2) {
             printf("\033[0;33m");
-        } else if (pixel->b > pixel->r/2) {
+        } else if (b > r/2) {
             printf("\033[0;35m");
         } else {
             printf("\033[0;31m");
         }
-    } else if (pixel->g > (pixel->r + pixel->b)/2) {
-        if (pixel->b > pixel->g/2) {
+    } else if (g > (r + b)/2) {
+        if (b > g/2) {
             printf("\033[0;36m");
         } else {
             printf("\033[0;32m");
         }
-    } else if (pixel->b > (pixel->g + pixel->r)/2) {
+    } else if (b > (g + r)/2) {
         printf("\033[0;34m");
     } else {
-        if (pixel->r > intensidade/2) {
+        if (r > intensidade/2) {
             printf("\033[0;37m");
         } else {
             printf("\033[0;30m");
@@ -307,14 +307,11 @@ void printImage(struct ImageInfo *image) {
         if (pixel->tipo != FUNDO) {
 #if __unix__
             if (pixel->tipo != LENDO) {
-                cor(pixel, image->intensidade);
-                printf("\u25A0");
-                printf("\033[0m");
+                cor(pixel->r, pixel->g, pixel->b, image->intensidade);
             } else {
-                cor(pixel, image->intensidade);
-                printf("\u25CF");
-                printf("\033[0m");
+                cor(image->intensidade - pixel->r, image->intensidade - pixel->g, image->intensidade - pixel->b, image->intensidade);
             }
+            printf("\u25A0\033[0m");
 #else
             if (pixel->tipo != LENDO) {
                 printf("#");
