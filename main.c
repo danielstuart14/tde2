@@ -1,3 +1,9 @@
+/*
+ * Contador de objetos em imagens PPM.
+ * 
+ * Autores: Daniel Stuart e Leonardo Deldotto.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -129,11 +135,11 @@ int main() {
  * Cria uma pilha com os valores iniciais X e Y
  */
 struct tPilha *criarPilha(int x, int y) {
-    struct tPilha *ret = (struct tPilha *) malloc(sizeof(struct tPilha));
+    struct tPilha *ret = (struct tPilha *) malloc(sizeof(struct tPilha)); //aloca a pilha
     ret->tamanho = 1;
-    ret->pixels = (struct tPos *) malloc(sizeof(struct tPos));
+    ret->pixels = (struct tPos *) malloc(sizeof(struct tPos)); //aloca o vetor de posições
     if (ret->pixels == NULL)
-        return NULL;
+        return NULL; //erro
     
     ret->pixels->x = x;
     ret->pixels->y = y;
@@ -144,18 +150,22 @@ struct tPilha *criarPilha(int x, int y) {
  * Remove o último dado da pilha
  */
 int pop(struct tPilha *pilha) {
-    if (!pilha->tamanho)
-        return -1;
+    if (!pilha->tamanho) //tamanho é zero
+        return -1; //erro
 
-    pilha->tamanho--;
+    pilha->tamanho--; //diminui o tamanho da pilha
+    
+    //Não deleta a pilha caso não haja mais dados, apenas zera a mesma.
     if (!pilha->tamanho) {
         pilha->pixels->x = 0;
         pilha->pixels->y = 0;
-        return 0;
+        
+        return 0; //retorna sem erros
     }
-    pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho);
+    
+    pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho); //diminui o tamanho do vetor de posições
     if (pilha->pixels == NULL)
-        return -1;
+        return -1; //erro
 
     return 0;
 }
@@ -164,15 +174,17 @@ int pop(struct tPilha *pilha) {
  * Adiciona um dado na pilha
  */
 int push(struct tPilha *pilha, int x, int y) {
-    pilha->tamanho++;
-    if (pilha->tamanho != 1) {
-        pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho);
+    pilha->tamanho++; //aumenta tamanho da pilha
+    if (pilha->tamanho != 1) { //caso já haja dados na pilha
+        pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho); //aumenta tamanho do vetor de posições
+        
         if (pilha->pixels == NULL)
-            return -1;
+            return -1; //erro
     }
     
     (pilha->pixels + (pilha->tamanho - 1))->x = x;
     (pilha->pixels + (pilha->tamanho - 1))->y = y;
+    
     return 0;
 }
 
@@ -196,17 +208,18 @@ void deletarPilha(struct tPilha *pilha) {
  */
 int contarObjetos(struct ImageInfo *imagem, int mostrar) {
     int i, j, obj=0;
+    
+    //Varre todas as posições da imagem
     for (i = 0; i < imagem->altura; i++) {
         for (j = 0; j < imagem->largura; j++) {
-            if (!getPixel(imagem, j, i)->tipo) {
-                //printf("abrindo para %d %d\n", j, i);
-                abrir(imagem, j, i, mostrar);
-                obj++;
+            if (!getPixel(imagem, j, i)->tipo) { //objeto é do tipo 0
+                abrir(imagem, j, i, mostrar); //abre as casas ao redor
+                obj++; //aumenta a quantidade de objetos
             }
         }
     }
     
-    return obj;
+    return obj; //retorna quantidade de objetos
 }
 
 /*
