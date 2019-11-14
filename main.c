@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "pilha.h"
+
 #ifdef __unix__
 #include <unistd.h>
 #else
@@ -41,37 +43,16 @@ struct ImageInfo {
 };
 
 /*
- * Struct da posição de cada pixel, utilizado na pilha.
- */
-struct tPos {
-    int x, y;
-};
-
-/*
- * Struct da pilha, contendo seu tamanho e um ponteiro 
- * para a posição do primeiro pixel.
- */
-struct tPilha {
-    int tamanho;
-    struct tPos *pixels;
-};
-
-/*
  * Funções do programa 
  */
 FILE *readFile();
 
-struct tPilha *criarPilha(int, int);
-struct tPos *get(struct tPilha *);
 struct PixelInfo *getPixel(struct ImageInfo *, int, int);
 
-int pop(struct tPilha *);
-int push(struct tPilha *, int, int);
 int contarObjetos(struct ImageInfo *, int);
 int getNumber(FILE *, int *);
 int power(int, int);
 
-void deletarPilha(struct tPilha *pilha);
 void abrir(struct ImageInfo *, int, int, int);
 void image2Struct (FILE *, struct PixelInfo *);
 void cor(int, int, int, int);
@@ -129,78 +110,6 @@ int main() {
     fclose(ppm); //Fecha o arquivo
     
     return 0;
-}
-
-/*
- * Cria uma pilha com os valores iniciais X e Y
- */
-struct tPilha *criarPilha(int x, int y) {
-    struct tPilha *ret = (struct tPilha *) malloc(sizeof(struct tPilha)); //aloca a pilha
-    ret->tamanho = 1;
-    ret->pixels = (struct tPos *) malloc(sizeof(struct tPos)); //aloca o vetor de posições
-    if (ret->pixels == NULL)
-        return NULL; //erro
-    
-    ret->pixels->x = x;
-    ret->pixels->y = y;
-    return ret;
-}
-
-/*
- * Remove o último dado da pilha
- */
-int pop(struct tPilha *pilha) {
-    if (!pilha->tamanho) //tamanho é zero
-        return -1; //erro
-
-    pilha->tamanho--; //diminui o tamanho da pilha
-    
-    //Não deleta a pilha caso não haja mais dados, apenas zera a mesma.
-    if (!pilha->tamanho) {
-        pilha->pixels->x = 0;
-        pilha->pixels->y = 0;
-        
-        return 0; //retorna sem erros
-    }
-    
-    pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho); //diminui o tamanho do vetor de posições
-    if (pilha->pixels == NULL)
-        return -1; //erro
-
-    return 0;
-}
-
-/*
- * Adiciona um dado na pilha
- */
-int push(struct tPilha *pilha, int x, int y) {
-    pilha->tamanho++; //aumenta tamanho da pilha
-    if (pilha->tamanho != 1) { //caso já haja dados na pilha
-        pilha->pixels = (struct tPos *) realloc(pilha->pixels, sizeof(struct tPos)*pilha->tamanho); //aumenta tamanho do vetor de posições
-        
-        if (pilha->pixels == NULL)
-            return -1; //erro
-    }
-    
-    (pilha->pixels + (pilha->tamanho - 1))->x = x;
-    (pilha->pixels + (pilha->tamanho - 1))->y = y;
-    
-    return 0;
-}
-
-/*
- * Obtém o ultimo dado da pilha
- */
-struct tPos *get(struct tPilha *pilha) {
-    return pilha->pixels + (pilha->tamanho - 1);
-}
-
-/*
- * Deleta a pilha, livrando a memória
- */
-void deletarPilha(struct tPilha *pilha) {
-    free(pilha->pixels);
-    free(pilha);
 }
 
 /*
