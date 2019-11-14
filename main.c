@@ -50,7 +50,7 @@ int power(int, int);
 
 int main() {
     int ret = 0, objs;
-    char input;
+    char input = 0;
     FILE *ppm;
     struct ImageInfo imagem;
     printf("Contador de Objetos PPM\n");
@@ -74,10 +74,13 @@ int main() {
         printf("\nErro no alocamento!\n");
         return -1;
     }
-    printf("\nDeseja exibir a imagem [s/n]? ");
-    scanf(" %c", &input);
-    image2Struct(ppm, imagem.inicio);
+
+    if (imagem.largura <= 96 && imagem.altura <= 48) {
+        printf("\nDeseja exibir a imagem [s/n]? ");
+        scanf(" %c", &input);
+    }
     
+    image2Struct(ppm, imagem.inicio);
     if (input == 's' || input == 'S') {
         objs = contarObjetos(&imagem, 1);
         printImage(&imagem);
