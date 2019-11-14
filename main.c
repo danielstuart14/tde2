@@ -1,99 +1,133 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #ifdef __unix__
 #include <unistd.h>
 #else
 #include <windows.h>
 #endif
 
+/*
+ * Estado de cada pixel da imagem, devido o uso de calloc, 
+ * o estado inicial é sempre zero.
+ */
 #define FUNDO 1
 #define LENDO 2
 #define LIDO 3
 
+/*
+ * Struct para cada pixel na imagem, contendo valores RGB
+ * e o tipo de pixel (conforme macros acima).
+ */
 struct PixelInfo {
     int r, g, b;
     int tipo;
 };
 
+/*
+ * Struct da imagem, contendo suas propriedades e um ponteiro 
+ * para o primeiro pixel.
+ */
 struct ImageInfo {
     int largura, altura, intensidade;
     struct PixelInfo *inicio;
 };
 
+/*
+ * Struct da posição de cada pixel, utilizado na pilha.
+ */
 struct tPos {
     int x, y;
 };
 
+/*
+ * Struct da pilha, contendo seu tamanho e um ponteiro 
+ * para a posição do primeiro pixel.
+ */
 struct tPilha {
     int tamanho;
     struct tPos *pixels;
 };
 
+/*
+ * Funções do programa 
+ */
+FILE *readFile();
+
 struct tPilha *criarPilha(int, int);
+struct tPos *get(struct tPilha *);
+struct PixelInfo *getPixel(struct ImageInfo *, int, int);
+
 int pop(struct tPilha *);
 int push(struct tPilha *, int, int);
-struct tPos *get(struct tPilha *);
-void deletarPilha(struct tPilha *pilha);
-
 int contarObjetos(struct ImageInfo *, int);
-void abrir(struct ImageInfo *, int, int, int);
+int getNumber(FILE *, int *);
+int power(int, int);
 
-FILE *readFile();
+void deletarPilha(struct tPilha *pilha);
+void abrir(struct ImageInfo *, int, int, int);
 void image2Struct (FILE *, struct PixelInfo *);
-struct PixelInfo *getPixel(struct ImageInfo *, int, int);
 void cor(int, int, int, int);
 void printImage(struct ImageInfo *);
-int getNumber(FILE *, int *);
-
-int power(int, int);
 
 int main() {
     int ret = 0, objs;
     char input = 0;
     FILE *ppm;
     struct ImageInfo imagem;
-    printf("Contador de Objetos PPM\n");
-    printf("  Por: Daniel Stuart\n\n");
-
+    printf("        Contador de Objetos PPM        \n");
+    printf(" Por: Daniel Stuart e Leonardo Deldotto\n\n");
+    
+    //Pergunta o arquivo e o lê
     ppm = readFile();
     if (ppm == NULL)
-        return -1;
+        return -1; //erro
 
+    //Extrai as informações da imagem através de caracteres ASCII
     ret += getNumber(ppm, &imagem.largura);
     ret += getNumber(ppm, &imagem.altura);
     ret += getNumber(ppm, &imagem.intensidade);
     if (ret) {
         printf("\nErro no formato do arquivo!\n");
-        return -1;
+        return -1; //erro
     }
 
-    printf("\n%d x %d - %d\n", imagem.largura, imagem.altura, imagem.intensidade);
-    imagem.inicio = (struct PixelInfo *) calloc(imagem.altura * imagem.largura, sizeof(struct PixelInfo));
+    printf("\n%d x %d - %d\n", imagem.largura, imagem.altura, imagem.intensidade); //Mostra as informações na tela
+    imagem.inicio = (struct PixelInfo *) calloc(imagem.altura * imagem.largura, sizeof(struct PixelInfo)); //aloca o espaço para o vetor
     if (imagem.inicio == NULL) {
         printf("\nErro no alocamento!\n");
-        return -1;
+        return -1; //erro
     }
 
+    //Transforma a imagem em um vetor de struct de pixels
+    image2Struct(ppm, imagem.inicio);
+    
+    //Pergunta se deseja mostrar a imagem caso ela caiba na tela
     if (imagem.largura <= 96 && imagem.altura <= 48) {
         printf("\nDeseja exibir a imagem [s/n]? ");
         scanf(" %c", &input);
     }
     
-    image2Struct(ppm, imagem.inicio);
+    //Mostra a imagem sendo varrida dependendo da resposta do usuário
     if (input == 's' || input == 'S') {
         objs = contarObjetos(&imagem, 1);
         printImage(&imagem);
     } else {
         objs = contarObjetos(&imagem, 0);
     }
+    
+    //Mostra a quantidade de objetos e encerra
     printf("\nObjetos: %d\n", objs);
-    free(imagem.inicio);
-    fclose(ppm);
+    free(imagem.inicio); //Livra a memória
+    fclose(ppm); //Fecha o arquivo
     
     return 0;
 }
 
+/*
+ * Cria uma pilha com os valores iniciais X e Y
+ */
 struct tPilha *criarPilha(int x, int y) {
     struct tPilha *ret = (struct tPilha *) malloc(sizeof(struct tPilha));
     ret->tamanho = 1;
@@ -106,6 +140,9 @@ struct tPilha *criarPilha(int x, int y) {
     return ret;
 }
 
+/*
+ * Remove o último dado da pilha
+ */
 int pop(struct tPilha *pilha) {
     if (!pilha->tamanho)
         return -1;
@@ -123,6 +160,9 @@ int pop(struct tPilha *pilha) {
     return 0;
 }
 
+/*
+ * Adiciona um dado na pilha
+ */
 int push(struct tPilha *pilha, int x, int y) {
     pilha->tamanho++;
     if (pilha->tamanho != 1) {
@@ -136,15 +176,24 @@ int push(struct tPilha *pilha, int x, int y) {
     return 0;
 }
 
+/*
+ * Obtém o ultimo dado da pilha
+ */
 struct tPos *get(struct tPilha *pilha) {
     return pilha->pixels + (pilha->tamanho - 1);
 }
 
+/*
+ * Deleta a pilha, livrando a memória
+ */
 void deletarPilha(struct tPilha *pilha) {
     free(pilha->pixels);
     free(pilha);
 }
 
+/*
+ * Conta a quantidade de objetos na imagem
+ */
 int contarObjetos(struct ImageInfo *imagem, int mostrar) {
     int i, j, obj=0;
     for (i = 0; i < imagem->altura; i++) {
@@ -160,6 +209,10 @@ int contarObjetos(struct ImageInfo *imagem, int mostrar) {
     return obj;
 }
 
+/*
+ * Abre as casas com pixel do tipo "0" ao redor de 
+ * um determinado pixel
+ */
 void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
     int i;
     struct PixelInfo *pixel;
@@ -215,6 +268,9 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
     deletarPilha(pilha);
 }
 
+/*
+ * Pergunta o arquivo e lê o mesmo
+ */
 FILE *readFile() {
     FILE *ret;
     char file[100];
@@ -237,6 +293,10 @@ FILE *readFile() {
     return ret;
 }
 
+/*
+ * Transforma os valores RGB binários dos pixels em
+ * um vetor de structs
+ */
 void image2Struct (FILE *ppm, struct PixelInfo *first) {
     struct PixelInfo *pixel = first;
     int c = fgetc(ppm);
@@ -264,11 +324,18 @@ void image2Struct (FILE *ppm, struct PixelInfo *first) {
     }
 }
 
+/*
+ * Retorna o pixel na posição X e Y
+ */
 struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
     long inc = x + (image->largura)*y;
     return image->inicio + inc;
 };
 
+/*
+ * Define uma cor conforme valores RGB do pixel.
+ * OBS: Suporta apenas 8 cores.
+ */
 void cor(int r, int g, int b, int intensidade) {
     if (r > (g + b)/2) {
         if (g > r/2) {
@@ -295,6 +362,9 @@ void cor(int r, int g, int b, int intensidade) {
     }
 }
 
+/*
+ * Mostra a imagem na tela do usuário
+ */
 void printImage(struct ImageInfo *image) {
     struct PixelInfo *pixel = image->inicio;
     int i;
@@ -333,6 +403,9 @@ void printImage(struct ImageInfo *image) {
     }
 }
 
+/*
+ * Obtém um número de um arquivo texto
+ */
 int getNumber(FILE *file, int *val) {
     int i, ret=0, c = fgetc(file);
     while (c == ' ' || c == '\n') {
@@ -357,6 +430,10 @@ int getNumber(FILE *file, int *val) {
     return 0;
 }
 
+/*
+ * Retorna o resultado da exponencial entre os parâmetros
+ * OBS: Apenas expoentes positivos
+ */
 int power(int base, int exponent) {
     int i, ret = 1;
     for (i = 0; i < exponent; i++) {
