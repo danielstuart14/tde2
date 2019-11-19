@@ -38,33 +38,33 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
     struct PixelInfo *pixel;
     struct tPilha *pilha;
     struct tPos *pos;
-    pilha = criarPilha(x, y);
+    pilha = criarPilha(x, y); //cria a pilha com X e Y iniciais
     
-    while (pilha->tamanho > 0) {
-        pos = get(pilha);
+    while (pilha->tamanho > 0) { //enquantou houver algo na pilha
+        pos = get(pilha); //obtém o ponteiro para a struct de posição do pixel
         x = pos->x;
         y = pos->y;
-        pop(pilha);
+        pop(pilha); //remove o pixel da pilha
         for (i = -1; i <=  1; i++) {
 
-            if ((y + i) >= 0 && (y + i) < imagem->altura) {
-                pixel = getPixel(imagem, x, (y + i));
-                if (!pixel->tipo) {
-                    pixel->tipo = LENDO;
-                    push(pilha, x, (y + i));
+            if ((y + i) >= 0 && (y + i) < imagem->altura) { //caso pixel adjacente esteja dentro da imagem
+                pixel = getPixel(imagem, x, (y + i)); //obtém dados do pixel
+                if (!pixel->tipo) { //caso tipo do pixel seja diferente de 0
+                    pixel->tipo = LENDO; //utilizado apenas para exibição da imagem
+                    push(pilha, x, (y + i)); //adiciona pixel na pilha
                     if (mostrar) {
-                        printImage(imagem);
+                        printImage(imagem); //mostra a imagem na tela com o pixel atualmente sendo verificado
 #ifdef __unix__
-                        usleep(1 * power(10, 4));
+                        usleep(DELAY * power(10, 3));
 #else
-                        Sleep(10);
+                        Sleep(DELAY);
 #endif
                     }
-                    pixel->tipo = LIDO;
+                    pixel->tipo = LIDO; //define o pixel como tendo sido lido
                 }
             }
 
-            if ((x + i) >= 0 && (x + i) < imagem->largura) {
+            if ((x + i) >= 0 && (x + i) < imagem->largura) { //igual o código acima, mas para os pixels na horizontal
                 pixel = getPixel(imagem, (x + i), y);
                 if (!pixel->tipo) {
                     pixel->tipo = LENDO;
@@ -72,9 +72,9 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
                     if (mostrar) {
                         printImage(imagem);
 #ifdef __unix__
-                        usleep(1 * power(10, 4));
+                        usleep(DELAY * power(10, 3));
 #else
-                        Sleep(10);
+                        Sleep(DELAY);
 #endif
                     }
                     pixel->tipo = LIDO;
@@ -85,7 +85,7 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
 
     }
 
-    deletarPilha(pilha);
+    deletarPilha(pilha); //livra a memória após o uso
 }
 
 /*
@@ -96,21 +96,21 @@ FILE *readFile() {
     char file[100];
     do {
         printf("Digite o nome do arquivo: ");
-        fgets(file, 100, stdin);
-        file[strlen(file) - 1] = '\0';
+        fgets(file, 100, stdin); //obtém o nome do arquivo
+        file[strlen(file) - 1] = '\0'; //remove o enter do final da string
 
-        ret = fopen(file, "r");
-        if (ret == NULL)
+        ret = fopen(file, "r"); //abre o arquivo no modo leitura
+        if (ret == NULL) //arquivo não encontrado
             printf("Erro ao abrir arquivo! Tente novamente...\n\n");
         
-    } while (ret == NULL);
+    } while (ret == NULL); //pergunta o nome do arquivo até encontrar um válido
 
-    if (!(fgetc(ret) == 'P' && fgetc(ret) == '6')) {
+    if (!(fgetc(ret) == 'P' && fgetc(ret) == '6')) { //programa suporta apenas ppm do tipo RGB binário
         printf("\nErro no formato do arquivo!\n");
         return NULL;
     }
 
-    return ret;
+    return ret; //retorna arquivo aberto
 }
 
 /*
@@ -119,18 +119,18 @@ FILE *readFile() {
  */
 void image2Struct (FILE *ppm, struct PixelInfo *first) {
     struct PixelInfo *pixel = first;
-    int c = fgetc(ppm);
+    int c = fgetc(ppm); //obtém próximo caracter
 
-    pixel->r = c;
+    pixel->r = c; //intensidade do subpixel vermelho
     c = fgetc(ppm);
-    pixel->g = c;
+    pixel->g = c; //intensidade do subpixel verde
     c = fgetc(ppm);
-    pixel->b = c;
+    pixel->b = c; //intensidade do subpixel azul
     c = fgetc(ppm);
-    pixel->tipo = FUNDO;
-    pixel++;
+    pixel->tipo = FUNDO; //define tipo como fundo
+    pixel++; //próximo ponteiro na lista
 
-    while (c != EOF) {
+    while (c != EOF) { //enquanto o caractér não for do tipo End Of File.
         pixel->r = c;
         c = fgetc(ppm);
         pixel->g = c;
@@ -138,7 +138,7 @@ void image2Struct (FILE *ppm, struct PixelInfo *first) {
         pixel->b = c;
         c = fgetc(ppm);
         if (pixel->r == first->r && pixel->g == first->g && pixel->b == first->b)
-            pixel->tipo = FUNDO;
+            pixel->tipo = FUNDO; //caso seja igual o primeiro pixel, então é fundo.
 
         pixel++;
     }
@@ -148,8 +148,8 @@ void image2Struct (FILE *ppm, struct PixelInfo *first) {
  * Retorna o pixel na posição X e Y
  */
 struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
-    long inc = x + (image->largura)*y;
-    return image->inicio + inc;
+    long inc = x + (image->largura)*y; //incremento é igual a posição em X + a largura da imagem vezes y.
+    return image->inicio + inc; //retorna um ponteiro para o pixel em X e Y, através da adição do incremento ao ponteiro inicial da imagem
 };
 
 /*
