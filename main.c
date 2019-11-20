@@ -1,7 +1,7 @@
 /*
  * Contador de objetos em imagens PPM.
  * 
- * Autores: Daniel Stuart e Leonardo Deldotto.
+ * Autor: Daniel Stuart <daniel.stuart@pucpr.edu.br>
  */
 #include "countppm.h"
 

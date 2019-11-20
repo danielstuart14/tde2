@@ -1,7 +1,7 @@
 /*
  * Pilha para contador de objetos
  * 
- * Autores: Daniel Stuart e Leonardo Deldotto.
+ * Autor: Daniel Stuart <daniel.stuart@pucpr.edu.br>
  */
 
 #include <stdlib.h>

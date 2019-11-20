@@ -1,3 +1,9 @@
+/*
+ * Biblioteca para contagem de objetos em imagens PPM.
+ * 
+ * Autor: Daniel Stuart <daniel.stuart@pucpr.edu.br>
+ */
+
 #include "countppm.h"
 #include "pilha.h"
 
