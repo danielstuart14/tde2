@@ -13,8 +13,8 @@ int main() {
     char input = 0;
     FILE *ppm;
     struct ImageInfo imagem;
-    printf("        Contador de Objetos PPM        \n");
-    printf(" Por: Daniel Stuart e Leonardo Deldotto\n\n");
+    printf("Contador de Objetos PPM\n");
+    printf("  Por: Daniel Stuart\n\n");
     
     //Pergunta o arquivo e o lê
     ppm = readFile();

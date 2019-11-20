@@ -54,10 +54,10 @@ void abrir(struct ImageInfo *imagem, int x, int y, int mostrar) {
                     push(pilha, x, (y + i)); //adiciona pixel na pilha
                     if (mostrar) {
                         printImage(imagem); //mostra a imagem na tela com o pixel atualmente sendo verificado
-#ifdef __unix__
-                        usleep(DELAY * power(10, 3));
+#ifdef __unix__ //caso seja um sistema baseado em unix
+                        usleep(DELAY * power(10, 3)); // em nanossegundos
 #else
-                        Sleep(DELAY);
+                        Sleep(DELAY); //em milissegundos
 #endif
                     }
                     pixel->tipo = LIDO; //define o pixel como tendo sido lido
@@ -159,25 +159,25 @@ struct PixelInfo *getPixel(struct ImageInfo *image, int x, int y) {
 void cor(int r, int g, int b, int intensidade) {
     if (r > (g + b)/2) {
         if (g > r/2) {
-            printf("\033[0;33m");
+            printf("\033[0;33m"); //amarelo
         } else if (b > r/2) {
-            printf("\033[0;35m");
+            printf("\033[0;35m"); //magenta
         } else {
-            printf("\033[0;31m");
+            printf("\033[0;31m"); //vermelho
         }
     } else if (g > (r + b)/2) {
         if (b > g/2) {
-            printf("\033[0;36m");
+            printf("\033[0;36m"); //ciano
         } else {
-            printf("\033[0;32m");
+            printf("\033[0;32m"); //verde
         }
     } else if (b > (g + r)/2) {
-        printf("\033[0;34m");
+        printf("\033[0;34m"); //azul
     } else {
         if (r > intensidade/2) {
-            printf("\033[0;37m");
+            printf("\033[0;37m"); //branco
         } else {
-            printf("\033[0;30m");
+            printf("\033[0;30m"); //preto
         }
     }
 }
@@ -190,7 +190,7 @@ void printImage(struct ImageInfo *image) {
     int i;
 
 #ifdef __unix__
-    system("clear");
+    system("clear"); //limpa tela
 #else
     system("cls");
 #endif
@@ -198,14 +198,14 @@ void printImage(struct ImageInfo *image) {
     printf("\n%d x %d - %d\n\n", image->largura, image->altura, image->intensidade);
     for (i = 1; i <= image->altura * image->largura; i++) {
         if (pixel->tipo != FUNDO) {
-#if __unix__
+#if __unix__ //mostra na tela com cores e caracteres unicode caso sistema seja do tipo unix
             if (pixel->tipo != LENDO) {
                 cor(pixel->r, pixel->g, pixel->b, image->intensidade);
             } else {
-                cor(image->intensidade - pixel->r, image->intensidade - pixel->g, image->intensidade - pixel->b, image->intensidade);
+                cor(image->intensidade - pixel->r, image->intensidade - pixel->g, image->intensidade - pixel->b, image->intensidade); //inverte a cor caso pixel esteja sendo lido
             }
-            printf("\u25A0\033[0m");
-#else
+            printf("\u25A0\033[0m"); //mostra caracter unicode de quadrado e reseta a cor
+#else //para windows e outros sistemas não-unix
             if (pixel->tipo != LENDO) {
                 printf("#");
             } else {
@@ -213,13 +213,13 @@ void printImage(struct ImageInfo *image) {
             }
 #endif
         } else {
-            printf(" ");
+            printf(" "); //caracter vazio para o fundo
         }
 
-        if (!(i % image->largura))
+        if (!(i % image->largura)) //pula uma linha após o último pixel de cada linha da imagem
             printf("\n");
 
-        pixel++;
+        pixel++; //próximo pixel
     }
 }
 
@@ -228,22 +228,22 @@ void printImage(struct ImageInfo *image) {
  */
 int getNumber(FILE *file, int *val) {
     int i, ret=0, c = fgetc(file);
-    while (c == ' ' || c == '\n') {
+    while (c == ' ' || c == '\n') { //ignora espaços e quebras de linha
         c = fgetc(file);
-        if (c == EOF)
+        if (c == EOF) //caso chegue ao final do arquivo retorne erro
             return -2;
     }
 
-    for (i=0; i < 4; i++) { 
-        if (c == ' ' || c == '\n' || c == EOF) {
-            *val = ret / power(10, (4 - i));
-            if (c == EOF)
+    for (i=0; i < 4; i++) { //suporta números positivos menores que 1000
+        if (c == ' ' || c == '\n' || c == EOF) { //caso seja espaço, quebra de linha ou final do arquivo (fim do número)
+            *val = ret / power(10, 4 - i); //valor é igual ao resultado da operação dividido por 10 elevado à 4 menos a quantidade de iterações
+            if (c == EOF) //caso seja final do arquivo retorne erro, porém diferente do erro caso não tivesse lido nenhum caractér
                 return -1;
-            return 0;
+            return 0; //caso contrário retorna sem erro
         }
-        c -= 48;
-        ret += c * power(10, 3) / power(10, i);
-        c = fgetc(file);
+        c -= 48; //transforma o valor ASCII da representação numérica em um inteiro equivalente
+        ret += c * power(10, 3 - i); //multiplica o numero por 10 elevado à 3 menos a quantidade de iterações.
+        c = fgetc(file); //obtém próximo caractér
     }
 
     *val = ret;
@@ -257,7 +257,7 @@ int getNumber(FILE *file, int *val) {
 int power(int base, int exponent) {
     int i, ret = 1;
     for (i = 0; i < exponent; i++) {
-        ret *= base;
+        ret *= base; //multiplica o valor de retorno pela base
     }
 
     return ret;
