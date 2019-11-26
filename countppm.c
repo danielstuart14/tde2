@@ -32,6 +32,9 @@ int contarObjetos(struct ImageInfo *imagem, int mostrar) {
         }
     }
     
+    if (mostrar)
+        printImage(imagem); //mostra imagem após contagem de objetos
+    
     return obj; //retorna quantidade de objetos
 }
 

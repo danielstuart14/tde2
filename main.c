@@ -46,13 +46,8 @@ int main() {
         scanf(" %c", &input);
     }
     
-    //Mostra a imagem sendo varrida dependendo da resposta do usuário
-    if (input == 's' || input == 'S') {
-        objs = contarObjetos(&imagem, 1);
-        printImage(&imagem);
-    } else {
-        objs = contarObjetos(&imagem, 0);
-    }
+    //Conta os objetos e mostra a imagem sendo varrida dependendo da resposta do usuário
+    objs = contarObjetos(&imagem, input == 's' || input == 'S');
     
     //Mostra a quantidade de objetos e encerra
     printf("\nObjetos: %d\n", objs);
